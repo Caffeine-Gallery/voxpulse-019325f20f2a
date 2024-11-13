@@ -1,0 +1,39 @@
+type Vote = 
+ record {
+   optionIds: vec nat;
+   voter: principal;
+ };
+type PollOption = 
+ record {
+   id: nat;
+   "text": text;
+   votes: nat;
+ };
+type Poll = 
+ record {
+   created: int;
+   creator: principal;
+   expiresAt: int;
+   id: nat;
+   isMultipleChoice: bool;
+   isPrivate: bool;
+   options: vec PollOption;
+   question: text;
+ };
+type Comment = 
+ record {
+   author: principal;
+   id: nat;
+   pollId: nat;
+   "text": text;
+   timestamp: int;
+ };
+service : {
+  addComment: (nat, text) -> (nat);
+  createPoll: (text, vec text, bool, bool, int) -> (nat);
+  getAllPolls: () -> (vec Poll) query;
+  getComments: (nat) -> (opt vec Comment) query;
+  getPoll: (nat) -> (opt Poll) query;
+  getVotes: (nat) -> (opt vec Vote) query;
+  vote: (nat, vec nat) -> (bool);
+}

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Voting App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="index.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">Community Voting</a>
+            <button id="loginBtn" class="btn btn-light">Login</button>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div id="authSection" class="d-none">
+            <button class="btn btn-primary mb-4" data-bs-toggle="modal" data-bs-target="#createPollModal">
+                Create New Poll
+            </button>
+        </div>
+
+        <div id="pollsList" class="row">
+            <!-- Polls will be dynamically added here -->
+        </div>
+    </div>
+
+    <!-- Create Poll Modal -->
+    <div class="modal fade" id="createPollModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Poll</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createPollForm">
+                        <div class="mb-3">
+                            <label class="form-label">Question</label>
+                            <input type="text" class="form-control" id="pollQuestion" required>
+                        </div>
+                        <div id="optionsContainer">
+                            <div class="mb-3">
+                                <label class="form-label">Options</label>
+                                <input type="text" class="form-control option-input" required>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="addOptionBtn">
+                            Add Option
+                        </button>
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">Expires In</label>
+                            <select class="form-select" id="pollExpiration">
+                                <option value="3600">1 Hour</option>
+                                <option value="86400">24 Hours</option>
+                                <option value="604800">1 Week</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="isPrivate">
+                                <label class="form-check-label">Private Poll</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="isMultipleChoice">
+                                <label class="form-check-label">Allow Multiple Choices</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="createPollBtn">Create Poll</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Poll Modal -->
+    <div class="modal fade" id="viewPollModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="pollTitle"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div id="votingSection"></div>
+                            <div id="qrCodeSection" class="text-center mt-3"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <canvas id="resultsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <h6>Comments</h6>
+                        <div id="commentsSection"></div>
+                        <div class="mt-3">
+                            <textarea class="form-control" id="commentText" rows="2" placeholder="Add a comment..."></textarea>
+                            <button class="btn btn-primary btn-sm mt-2" id="addCommentBtn">Add Comment</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="index.js"></script>
+</body>
+</html>
