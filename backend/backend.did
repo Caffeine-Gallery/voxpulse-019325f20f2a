@@ -3,6 +3,12 @@ type Vote =
    optionIds: vec nat;
    voter: principal;
  };
+type UserProfile = 
+ record {
+   createdPolls: vec nat;
+   participatedPolls: vec nat;
+   "principal": principal;
+ };
 type PollOption = 
  record {
    id: nat;
@@ -34,6 +40,7 @@ service : {
   getAllPolls: () -> (vec Poll) query;
   getComments: (nat) -> (opt vec Comment) query;
   getPoll: (nat) -> (opt Poll) query;
+  getUserPolls: (principal) -> (opt UserProfile) query;
   getVotes: (nat) -> (opt vec Vote) query;
   vote: (nat, vec nat) -> (bool);
 }

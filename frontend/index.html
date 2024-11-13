@@ -10,23 +10,70 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode.js"></script>
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
         <div class="container">
-            <a class="navbar-brand" href="#">Community Voting</a>
-            <button id="loginBtn" class="btn btn-light">Login</button>
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-check2-square text-primary"></i>
+                Community Voting
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-view="home">
+                            <i class="bi bi-house"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-view="myPolls">
+                            <i class="bi bi-collection"></i> My Polls
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-view="profile">
+                            <i class="bi bi-person"></i> Profile
+                        </a>
+                    </li>
+                </ul>
+                <button id="loginBtn" class="btn btn-outline-primary rounded-pill">Login</button>
+            </div>
         </div>
     </nav>
 
     <div class="container mt-4">
-        <div id="authSection" class="d-none">
-            <button class="btn btn-primary mb-4" data-bs-toggle="modal" data-bs-target="#createPollModal">
-                Create New Poll
-            </button>
+        <div id="homeView" class="view-content">
+            <div id="authSection" class="d-none text-center mb-4">
+                <button class="btn btn-primary btn-lg rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#createPollModal">
+                    <i class="bi bi-plus-lg"></i> Create New Poll
+                </button>
+            </div>
+            <div id="pollsList" class="row g-4"></div>
         </div>
 
-        <div id="pollsList" class="row">
-            <!-- Polls will be dynamically added here -->
+        <div id="myPollsView" class="view-content d-none">
+            <h3 class="mb-4">My Polls</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Created Polls</h5>
+                    <div id="createdPollsList" class="polls-container"></div>
+                </div>
+                <div class="col-md-6">
+                    <h5>Participated Polls</h5>
+                    <div id="participatedPollsList" class="polls-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="profileView" class="view-content d-none">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h3>Profile</h3>
+                    <div id="profileContent"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -34,27 +81,26 @@
     <div class="modal fade" id="createPollModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header border-0">
                     <h5 class="modal-title">Create New Poll</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="createPollForm">
-                        <div class="mb-3">
-                            <label class="form-label">Question</label>
-                            <input type="text" class="form-control" id="pollQuestion" required>
+                        <div class="mb-4">
+                            <input type="text" class="form-control form-control-lg" id="pollQuestion" 
+                                   placeholder="Enter your question" required>
                         </div>
                         <div id="optionsContainer">
                             <div class="mb-3">
-                                <label class="form-label">Options</label>
-                                <input type="text" class="form-control option-input" required>
+                                <input type="text" class="form-control option-input" 
+                                       placeholder="Option 1" required>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-secondary btn-sm" id="addOptionBtn">
-                            Add Option
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" id="addOptionBtn">
+                            <i class="bi bi-plus"></i> Add Option
                         </button>
-                        <div class="mb-3 mt-3">
-                            <label class="form-label">Expires In</label>
+                        <div class="mb-3 mt-4">
                             <select class="form-select" id="pollExpiration">
                                 <option value="3600">1 Hour</option>
                                 <option value="86400">24 Hours</option>
@@ -73,9 +119,9 @@
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" id="createPollBtn">Create Poll</button>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-pill" id="createPollBtn">Create Poll</button>
                 </div>
             </div>
         </div>
@@ -85,15 +131,15 @@
     <div class="modal fade" id="viewPollModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header border-0">
                     <h5 class="modal-title" id="pollTitle"></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <div id="votingSection"></div>
-                            <div id="qrCodeSection" class="text-center mt-3"></div>
+                            <div id="votingSection" class="mb-4"></div>
+                            <div id="qrCodeSection" class="text-center"></div>
                         </div>
                         <div class="col-md-6">
                             <canvas id="resultsChart"></canvas>
@@ -101,10 +147,13 @@
                     </div>
                     <div class="mt-4">
                         <h6>Comments</h6>
-                        <div id="commentsSection"></div>
+                        <div id="commentsSection" class="comments-container"></div>
                         <div class="mt-3">
-                            <textarea class="form-control" id="commentText" rows="2" placeholder="Add a comment..."></textarea>
-                            <button class="btn btn-primary btn-sm mt-2" id="addCommentBtn">Add Comment</button>
+                            <textarea class="form-control" id="commentText" rows="2" 
+                                      placeholder="Add a comment..."></textarea>
+                            <button class="btn btn-primary btn-sm rounded-pill mt-2" id="addCommentBtn">
+                                Add Comment
+                            </button>
                         </div>
                     </div>
                 </div>

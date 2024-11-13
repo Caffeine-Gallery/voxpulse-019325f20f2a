@@ -20,6 +20,11 @@ export interface Poll {
   'options' : Array<PollOption>,
 }
 export interface PollOption { 'id' : bigint, 'votes' : bigint, 'text' : string }
+export interface UserProfile {
+  'principal' : Principal,
+  'createdPolls' : Array<bigint>,
+  'participatedPolls' : Array<bigint>,
+}
 export interface Vote { 'voter' : Principal, 'optionIds' : Array<bigint> }
 export interface _SERVICE {
   'addComment' : ActorMethod<[bigint, string], bigint>,
@@ -30,6 +35,7 @@ export interface _SERVICE {
   'getAllPolls' : ActorMethod<[], Array<Poll>>,
   'getComments' : ActorMethod<[bigint], [] | [Array<Comment>]>,
   'getPoll' : ActorMethod<[bigint], [] | [Poll]>,
+  'getUserPolls' : ActorMethod<[Principal], [] | [UserProfile]>,
   'getVotes' : ActorMethod<[bigint], [] | [Array<Vote>]>,
   'vote' : ActorMethod<[bigint, Array<bigint>], boolean>,
 }

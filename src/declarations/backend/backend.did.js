@@ -21,6 +21,11 @@ export const idlFactory = ({ IDL }) => {
     'timestamp' : IDL.Int,
     'pollId' : IDL.Nat,
   });
+  const UserProfile = IDL.Record({
+    'principal' : IDL.Principal,
+    'createdPolls' : IDL.Vec(IDL.Nat),
+    'participatedPolls' : IDL.Vec(IDL.Nat),
+  });
   const Vote = IDL.Record({
     'voter' : IDL.Principal,
     'optionIds' : IDL.Vec(IDL.Nat),
@@ -35,6 +40,11 @@ export const idlFactory = ({ IDL }) => {
     'getAllPolls' : IDL.Func([], [IDL.Vec(Poll)], ['query']),
     'getComments' : IDL.Func([IDL.Nat], [IDL.Opt(IDL.Vec(Comment))], ['query']),
     'getPoll' : IDL.Func([IDL.Nat], [IDL.Opt(Poll)], ['query']),
+    'getUserPolls' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Opt(UserProfile)],
+        ['query'],
+      ),
     'getVotes' : IDL.Func([IDL.Nat], [IDL.Opt(IDL.Vec(Vote))], ['query']),
     'vote' : IDL.Func([IDL.Nat, IDL.Vec(IDL.Nat)], [IDL.Bool], []),
   });
