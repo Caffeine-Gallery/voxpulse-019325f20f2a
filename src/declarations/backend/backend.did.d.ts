@@ -15,6 +15,7 @@ export interface Poll {
   'creator' : Principal,
   'expiresAt' : bigint,
   'question' : string,
+  'accessCode' : [] | [string],
   'isPrivate' : boolean,
   'isMultipleChoice' : boolean,
   'options' : Array<PollOption>,
@@ -29,15 +30,16 @@ export interface Vote { 'voter' : Principal, 'optionIds' : Array<bigint> }
 export interface _SERVICE {
   'addComment' : ActorMethod<[bigint, string], bigint>,
   'createPoll' : ActorMethod<
-    [string, Array<string>, boolean, boolean, bigint],
+    [string, Array<string>, boolean, [] | [string], boolean, bigint],
     bigint
   >,
-  'getAllPolls' : ActorMethod<[], Array<Poll>>,
   'getComments' : ActorMethod<[bigint], [] | [Array<Comment>]>,
   'getPoll' : ActorMethod<[bigint], [] | [Poll]>,
+  'getPublicPolls' : ActorMethod<[], Array<Poll>>,
   'getUserPolls' : ActorMethod<[Principal], [] | [UserProfile]>,
   'getVotes' : ActorMethod<[bigint], [] | [Array<Vote>]>,
-  'vote' : ActorMethod<[bigint, Array<bigint>], boolean>,
+  'verifyPollAccess' : ActorMethod<[bigint, string], boolean>,
+  'vote' : ActorMethod<[bigint, Array<bigint>, [] | [string]], boolean>,
 }
 export declare const idlFactory: IDL.InterfaceFactory;
 export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];

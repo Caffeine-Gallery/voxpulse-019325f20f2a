@@ -17,6 +17,7 @@ type PollOption =
  };
 type Poll = 
  record {
+   accessCode: opt text;
    created: int;
    creator: principal;
    expiresAt: int;
@@ -36,11 +37,12 @@ type Comment =
  };
 service : {
   addComment: (nat, text) -> (nat);
-  createPoll: (text, vec text, bool, bool, int) -> (nat);
-  getAllPolls: () -> (vec Poll) query;
+  createPoll: (text, vec text, bool, opt text, bool, int) -> (nat);
   getComments: (nat) -> (opt vec Comment) query;
   getPoll: (nat) -> (opt Poll) query;
+  getPublicPolls: () -> (vec Poll) query;
   getUserPolls: (principal) -> (opt UserProfile) query;
   getVotes: (nat) -> (opt vec Vote) query;
-  vote: (nat, vec nat) -> (bool);
+  verifyPollAccess: (nat, text) -> (bool);
+  vote: (nat, vec nat, opt text) -> (bool);
 }

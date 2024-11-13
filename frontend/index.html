@@ -9,11 +9,12 @@
     <link href="index.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode"></script>
 </head>
 <body class="bg-light">
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
         <div class="container">
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand" href="#" data-view="home">
                 <i class="bi bi-check2-square text-primary"></i>
                 Community Voting
             </a>
@@ -32,11 +33,6 @@
                             <i class="bi bi-collection"></i> My Polls
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" data-view="profile">
-                            <i class="bi bi-person"></i> Profile
-                        </a>
-                    </li>
                 </ul>
                 <button id="loginBtn" class="btn btn-outline-primary rounded-pill">Login</button>
             </div>
@@ -44,34 +40,81 @@
     </nav>
 
     <div class="container mt-4">
+        <!-- Home View -->
         <div id="homeView" class="view-content">
             <div id="authSection" class="d-none text-center mb-4">
                 <button class="btn btn-primary btn-lg rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#createPollModal">
                     <i class="bi bi-plus-lg"></i> Create New Poll
                 </button>
             </div>
-            <div id="pollsList" class="row g-4"></div>
-        </div>
-
-        <div id="myPollsView" class="view-content d-none">
-            <h3 class="mb-4">My Polls</h3>
-            <div class="row">
-                <div class="col-md-6">
-                    <h5>Created Polls</h5>
-                    <div id="createdPollsList" class="polls-container"></div>
-                </div>
-                <div class="col-md-6">
-                    <h5>Participated Polls</h5>
-                    <div id="participatedPollsList" class="polls-container"></div>
+            <div class="row mb-4">
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Public Polls</h5>
+                            <div id="publicPollsList" class="row g-4"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div id="profileView" class="view-content d-none">
+        <!-- Poll Detail View -->
+        <div id="pollDetailView" class="view-content d-none">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h3>Profile</h3>
-                    <div id="profileContent"></div>
+                    <button class="btn btn-outline-primary mb-3" onclick="showHomeView()">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </button>
+                    <h3 id="pollDetailTitle"></h3>
+                    <div id="accessCodeSection" class="d-none mb-4">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="accessCodeInput" placeholder="Enter access code">
+                            <button class="btn btn-primary" id="verifyAccessBtn">Verify</button>
+                        </div>
+                        <div class="mt-2">
+                            <button class="btn btn-outline-secondary" id="scanQrBtn">
+                                <i class="bi bi-qr-code-scan"></i> Scan QR Code
+                            </button>
+                        </div>
+                        <div id="qrReader" class="mt-2 d-none"></div>
+                    </div>
+                    <div id="pollContent" class="d-none">
+                        <div id="votingSection" class="mb-4"></div>
+                        <div class="chart-container mb-4">
+                            <canvas id="resultsChart"></canvas>
+                        </div>
+                        <div class="comments-section">
+                            <h5>Comments</h5>
+                            <div id="commentsSection" class="mb-3"></div>
+                            <div class="input-group">
+                                <textarea class="form-control" id="commentText" rows="2" placeholder="Add a comment..."></textarea>
+                                <button class="btn btn-primary" id="addCommentBtn">Post</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Polls View -->
+        <div id="myPollsView" class="view-content d-none">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body">
+                            <h5>Created Polls</h5>
+                            <div id="createdPollsList"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body">
+                            <h5>Participated Polls</h5>
+                            <div id="participatedPollsList"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -112,6 +155,10 @@
                                 <input class="form-check-input" type="checkbox" id="isPrivate">
                                 <label class="form-check-label">Private Poll</label>
                             </div>
+                            <div id="accessCodeContainer" class="mb-3 d-none">
+                                <input type="text" class="form-control" id="accessCode" 
+                                       placeholder="Enter access code for private poll">
+                            </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="isMultipleChoice">
                                 <label class="form-check-label">Allow Multiple Choices</label>
@@ -122,40 +169,6 @@
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary rounded-pill" id="createPollBtn">Create Poll</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- View Poll Modal -->
-    <div class="modal fade" id="viewPollModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title" id="pollTitle"></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div id="votingSection" class="mb-4"></div>
-                            <div id="qrCodeSection" class="text-center"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <canvas id="resultsChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="mt-4">
-                        <h6>Comments</h6>
-                        <div id="commentsSection" class="comments-container"></div>
-                        <div class="mt-3">
-                            <textarea class="form-control" id="commentText" rows="2" 
-                                      placeholder="Add a comment..."></textarea>
-                            <button class="btn btn-primary btn-sm rounded-pill mt-2" id="addCommentBtn">
-                                Add Comment
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

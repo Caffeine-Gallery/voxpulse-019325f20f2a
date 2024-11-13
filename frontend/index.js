@@ -4,6 +4,8 @@ import { backend } from "declarations/backend";
 let authClient;
 let currentPrincipal = null;
 let currentPollId = null;
+let resultsChart = null;
+let updateInterval = null;
 
 // Initialize auth client
 async function initAuth() {
@@ -11,6 +13,8 @@ async function initAuth() {
     if (await authClient.isAuthenticated()) {
         handleAuthenticated();
     }
+    setupEventListeners();
+    loadPublicPolls();
 }
 
 async function login() {
@@ -25,7 +29,7 @@ async function handleAuthenticated() {
     document.getElementById('loginBtn').textContent = 'Logout';
     document.getElementById('loginBtn').onclick = logout;
     document.getElementById('authSection').classList.remove('d-none');
-    loadPolls();
+    loadPublicPolls();
 }
 
 async function logout() {
@@ -34,56 +38,49 @@ async function logout() {
     document.getElementById('loginBtn').textContent = 'Login';
     document.getElementById('loginBtn').onclick = login;
     document.getElementById('authSection').classList.add('d-none');
-    document.getElementById('pollsList').innerHTML = '';
+    loadPublicPolls();
 }
 
-// Poll Management
-async function createPoll() {
-    const question = document.getElementById('pollQuestion').value;
-    const options = Array.from(document.getElementsByClassName('option-input'))
-        .map(input => input.value);
-    const isPrivate = document.getElementById('isPrivate').checked;
-    const isMultipleChoice = document.getElementById('isMultipleChoice').checked;
-    const expirationSeconds = parseInt(document.getElementById('pollExpiration').value);
-    const expiresAt = BigInt(Date.now() + (expirationSeconds * 1000)) * BigInt(1000000);
-
-    try {
-        await backend.createPoll(question, options, isPrivate, isMultipleChoice, expiresAt);
-        bootstrap.Modal.getInstance(document.getElementById('createPollModal')).hide();
-        loadPolls();
-    } catch (error) {
-        console.error('Error creating poll:', error);
+// Navigation
+function showView(viewId) {
+    document.querySelectorAll('.view-content').forEach(view => view.classList.add('d-none'));
+    document.getElementById(viewId).classList.remove('d-none');
+    if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
     }
 }
 
-async function loadPolls() {
-    const polls = await backend.getAllPolls();
-    const pollsList = document.getElementById('pollsList');
+function showHomeView() {
+    showView('homeView');
+    loadPublicPolls();
+}
+
+// Poll Management
+async function loadPublicPolls() {
+    const polls = await backend.getPublicPolls();
+    const pollsList = document.getElementById('publicPollsList');
     pollsList.innerHTML = '';
 
     polls.forEach(poll => {
         const card = document.createElement('div');
         card.className = 'col-md-4 mb-4';
         card.innerHTML = `
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-body">
                     <h5 class="card-title">${poll.question}</h5>
                     <p class="card-text">
-                        ${poll.options.length} options · 
-                        ${poll.isPrivate ? 'Private' : 'Public'} ·
-                        ${poll.isMultipleChoice ? 'Multiple choice' : 'Single choice'}
+                        <small class="text-muted">
+                            Expires: ${new Date(Number(poll.expiresAt) / 1000000).toLocaleString()}
+                        </small>
                     </p>
-                    <button class="btn btn-primary view-poll" data-poll-id="${poll.id}">
+                    <button class="btn btn-primary" onclick="viewPoll(${poll.id})">
                         View Poll
                     </button>
                 </div>
             </div>
         `;
         pollsList.appendChild(card);
-    });
-
-    document.querySelectorAll('.view-poll').forEach(button => {
-        button.onclick = () => viewPoll(parseInt(button.dataset.pollId));
     });
 }
 
@@ -92,8 +89,24 @@ async function viewPoll(pollId) {
     const poll = await backend.getPoll(pollId);
     if (!poll) return;
 
-    document.getElementById('pollTitle').textContent = poll.question;
+    document.getElementById('pollDetailTitle').textContent = poll.question;
     
+    if (poll.isPrivate) {
+        document.getElementById('accessCodeSection').classList.remove('d-none');
+        document.getElementById('pollContent').classList.add('d-none');
+    } else {
+        document.getElementById('accessCodeSection').classList.add('d-none');
+        document.getElementById('pollContent').classList.remove('d-none');
+        setupPollContent(poll);
+    }
+
+    showView('pollDetailView');
+    if (!poll.isPrivate) {
+        startResultsUpdate();
+    }
+}
+
+function setupPollContent(poll) {
     // Setup voting section
     const votingSection = document.getElementById('votingSection');
     votingSection.innerHTML = poll.options.map(option => `
@@ -104,49 +117,58 @@ async function viewPoll(pollId) {
                 ${option.text}
             </label>
         </div>
-    `).join('');
-    
-    // Add vote button
-    votingSection.innerHTML += `
-        <button class="btn btn-primary mt-3" id="submitVoteBtn">Vote</button>
+    `).join('') + `
+        <button class="btn btn-primary mt-3" onclick="submitVote()">Vote</button>
     `;
-    document.getElementById('submitVoteBtn').onclick = () => submitVote(pollId);
 
-    // Generate QR Code
-    const qrCodeSection = document.getElementById('qrCodeSection');
-    const pollUrl = `${window.location.origin}?poll=${pollId}`;
-    QRCode.toCanvas(qrCodeSection, pollUrl);
-
-    // Load and display results
-    updateResults(pollId);
-    loadComments(pollId);
-
-    // Show modal
-    new bootstrap.Modal(document.getElementById('viewPollModal')).show();
+    updateResults();
+    loadComments();
 }
 
-async function submitVote(pollId) {
+async function verifyAccess() {
+    const accessCode = document.getElementById('accessCodeInput').value;
+    const verified = await backend.verifyPollAccess(currentPollId, accessCode);
+    if (verified) {
+        const poll = await backend.getPoll(currentPollId);
+        document.getElementById('accessCodeSection').classList.add('d-none');
+        document.getElementById('pollContent').classList.remove('d-none');
+        setupPollContent(poll);
+        startResultsUpdate();
+    } else {
+        alert('Invalid access code');
+    }
+}
+
+async function submitVote() {
     const selectedOptions = Array.from(document.querySelectorAll('input[name="pollOption"]:checked'))
         .map(input => parseInt(input.value));
     
     if (selectedOptions.length === 0) return;
 
+    const poll = await backend.getPoll(currentPollId);
+    const accessCode = poll.isPrivate ? document.getElementById('accessCodeInput').value : null;
+
     try {
-        await backend.vote(pollId, selectedOptions);
-        updateResults(pollId);
+        await backend.vote(currentPollId, selectedOptions, accessCode ? [accessCode] : []);
+        updateResults();
     } catch (error) {
         console.error('Error submitting vote:', error);
     }
 }
 
-async function updateResults(pollId) {
-    const poll = await backend.getPoll(pollId);
-    const votes = await backend.getVotes(pollId);
+async function updateResults() {
+    const poll = await backend.getPoll(currentPollId);
+    const votes = await backend.getVotes(currentPollId);
     
     if (!poll || !votes) return;
 
     const ctx = document.getElementById('resultsChart').getContext('2d');
-    new Chart(ctx, {
+    
+    if (resultsChart) {
+        resultsChart.destroy();
+    }
+
+    resultsChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: poll.options.map(opt => opt.text),
@@ -156,7 +178,9 @@ async function updateResults(pollId) {
                     return votes.reduce((count, vote) => 
                         count + (vote.optionIds.includes(opt.id) ? 1 : 0), 0);
                 }),
-                backgroundColor: 'rgba(54, 162, 235, 0.5)'
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
             }]
         },
         options: {
@@ -173,8 +197,15 @@ async function updateResults(pollId) {
     });
 }
 
-async function loadComments(pollId) {
-    const comments = await backend.getComments(pollId);
+function startResultsUpdate() {
+    if (updateInterval) {
+        clearInterval(updateInterval);
+    }
+    updateInterval = setInterval(updateResults, 5000);
+}
+
+async function loadComments() {
+    const comments = await backend.getComments(currentPollId);
     const commentsSection = document.getElementById('commentsSection');
     
     if (!comments) {
@@ -196,30 +227,46 @@ async function loadComments(pollId) {
 
 async function addComment() {
     const text = document.getElementById('commentText').value.trim();
-    if (!text || !currentPollId) return;
+    if (!text) return;
 
     try {
         await backend.addComment(currentPollId, text);
         document.getElementById('commentText').value = '';
-        loadComments(currentPollId);
+        loadComments();
     } catch (error) {
         console.error('Error adding comment:', error);
     }
 }
 
 // Event Listeners
-document.getElementById('loginBtn').onclick = login;
-document.getElementById('createPollBtn').onclick = createPoll;
-document.getElementById('addCommentBtn').onclick = addComment;
-document.getElementById('addOptionBtn').onclick = () => {
-    const container = document.getElementById('optionsContainer');
-    const input = document.createElement('div');
-    input.className = 'mb-3';
-    input.innerHTML = `
-        <input type="text" class="form-control option-input" required>
-    `;
-    container.appendChild(input);
-};
+function setupEventListeners() {
+    document.getElementById('loginBtn').onclick = login;
+    document.getElementById('createPollBtn').onclick = createPoll;
+    document.getElementById('addCommentBtn').onclick = addComment;
+    document.getElementById('verifyAccessBtn').onclick = verifyAccess;
+    document.getElementById('isPrivate').onchange = function() {
+        document.getElementById('accessCodeContainer').classList.toggle('d-none', !this.checked);
+    };
+    
+    document.getElementById('scanQrBtn').onclick = function() {
+        const qrReader = document.getElementById('qrReader');
+        qrReader.classList.toggle('d-none');
+        if (!qrReader.classList.contains('d-none')) {
+            const html5QrcodeScanner = new Html5QrcodeScanner(
+                "qrReader", { fps: 10, qrbox: 250 });
+            html5QrcodeScanner.render((decodedText) => {
+                document.getElementById('accessCodeInput').value = decodedText;
+                html5QrcodeScanner.clear();
+                qrReader.classList.add('d-none');
+                verifyAccess();
+            });
+        }
+    };
+
+    document.querySelectorAll('[data-view]').forEach(element => {
+        element.onclick = () => showView(element.dataset.view);
+    });
+}
 
 // Initialize
 initAuth();

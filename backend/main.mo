@@ -25,6 +25,7 @@ actor {
         question: Text;
         options: [PollOption];
         isPrivate: Bool;
+        accessCode: ?Text;
         isMultipleChoice: Bool;
         expiresAt: Int;
         created: Int;
@@ -76,7 +77,7 @@ actor {
         userProfiles := HashMap.fromIter<Principal, UserProfile>(userProfileEntries.vals(), 0, Principal.equal, Principal.hash);
     };
 
-    public shared(msg) func createPoll(question: Text, options: [Text], isPrivate: Bool, isMultipleChoice: Bool, expiresAt: Int) : async Nat {
+    public shared(msg) func createPoll(question: Text, options: [Text], isPrivate: Bool, accessCode: ?Text, isMultipleChoice: Bool, expiresAt: Int) : async Nat {
         let pollId = nextPollId;
         nextPollId += 1;
 
@@ -94,6 +95,7 @@ actor {
             question = question;
             options = pollOptions;
             isPrivate = isPrivate;
+            accessCode = accessCode;
             isMultipleChoice = isMultipleChoice;
             expiresAt = expiresAt;
             created = Time.now();
@@ -122,6 +124,29 @@ actor {
         pollId
     };
 
+    public query func getPublicPolls() : async [Poll] {
+        let publicPolls = Buffer.Buffer<Poll>(0);
+        for ((_, poll) in polls.entries()) {
+            if (not poll.isPrivate) {
+                publicPolls.add(poll);
+            };
+        };
+        Buffer.toArray(publicPolls)
+    };
+
+    public shared(msg) func verifyPollAccess(pollId: Nat, accessCode: Text) : async Bool {
+        switch (polls.get(pollId)) {
+            case (null) { false };
+            case (?poll) {
+                if (not poll.isPrivate) { return true; };
+                switch (poll.accessCode) {
+                    case (null) { false };
+                    case (?code) { code == accessCode };
+                };
+            };
+        }
+    };
+
     public query func getUserPolls(user: Principal) : async ?UserProfile {
         userProfiles.get(user)
     };
@@ -130,15 +155,19 @@ actor {
         polls.get(pollId)
     };
 
-    public query func getAllPolls() : async [Poll] {
-        Iter.toArray(polls.vals())
-    };
-
-    public shared(msg) func vote(pollId: Nat, optionIds: [Nat]) : async Bool {
+    public shared(msg) func vote(pollId: Nat, optionIds: [Nat], accessCode: ?Text) : async Bool {
         switch (polls.get(pollId)) {
             case (null) { return false; };
             case (?poll) {
                 if (Time.now() > poll.expiresAt) { return false; };
+                if (poll.isPrivate) {
+                    switch (accessCode, poll.accessCode) {
+                        case (?code, ?pollCode) {
+                            if (code != pollCode) { return false; };
+                        };
+                        case (_, _) { return false; };
+                    };
+                };
 
                 let newVote: Vote = {
                     voter = msg.caller;
